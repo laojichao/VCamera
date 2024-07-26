@@ -19,6 +19,8 @@ import androidx.appcompat.widget.AppCompatTextView;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SwitchCompat;
 
+import com.blankj.utilcode.util.SPUtils;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -27,7 +29,6 @@ import virtual.camera.app.R;
 import virtual.camera.app.app.App;
 import virtual.camera.app.settings.LogUtil;
 import virtual.camera.app.settings.MethodType;
-import virtual.camera.camera.MultiPreferences;
 import virtual.camera.app.util.AppUtil;
 import virtual.camera.app.util.HandlerUtil;
 import virtual.camera.app.util.ToastUtils;
@@ -108,7 +109,7 @@ public class SettingFragment extends BaseFragment {
             }
         });
 
-        int method_type = MultiPreferences.getInstance().getInt("method_type", MethodType.TYPE_DISABLE_CAMERA);
+        int method_type = SPUtils.getInstance().getInt("method_type", MethodType.TYPE_DISABLE_CAMERA);
         if (method_type > 0) {
             onMethodTypeClick(method_type);
         }
@@ -119,7 +120,7 @@ public class SettingFragment extends BaseFragment {
         FileOutputStream fos = null;
         try {
             Uri uri = Uri.parse(u);
-            String video_path_local = MultiPreferences.getInstance().getString("video_path_local_final_out", "");
+            String video_path_local = SPUtils.getInstance().getString("video_path_local_final_out", "");
             if (!TextUtils.isEmpty(video_path_local)) {
                 new File(video_path_local).delete();
             }
@@ -137,10 +138,10 @@ public class SettingFragment extends BaseFragment {
             fos.close();
             is.close();
 
-            MultiPreferences.getInstance().setInt("method_type", mMethodType);
-            MultiPreferences.getInstance().setString("video_path_local", u);
-            MultiPreferences.getInstance().setString("video_path_local_final_out", outPath);
-            MultiPreferences.getInstance().setBoolean("video_path_local_audio_enable", mAudioSwitch.isChecked());
+            SPUtils.getInstance().put("method_type", mMethodType);
+            SPUtils.getInstance().put("video_path_local", u);
+            SPUtils.getInstance().put("video_path_local_final_out", outPath);
+            SPUtils.getInstance().put("video_path_local_audio_enable", mAudioSwitch.isChecked());
             ToastUtils.showToast("Save Success...:");
             return true;
         } catch (Throwable e) {
@@ -194,11 +195,11 @@ public class SettingFragment extends BaseFragment {
                 mInput.setHint("");
                 mInput.setEnabled(false);
                 if (mHasOpenDocuments) {
-                    mInput.setText(MultiPreferences.getInstance().getString("video_path_local", ""));
+                    mInput.setText(SPUtils.getInstance().getString("video_path_local", ""));
                 } else {
                     mInput.setText("");
                 }
-                mAudioSwitch.setChecked(MultiPreferences.getInstance().getBoolean("video_path_local_audio_enable", true));
+                mAudioSwitch.setChecked(SPUtils.getInstance().getBoolean("video_path_local_audio_enable", true));
                 break;
             case MethodType.TYPE_NETWORK_VIDEO:
                 mProtectMethodText.setText(R.string.protect_method_network);
@@ -209,8 +210,8 @@ public class SettingFragment extends BaseFragment {
                 mAudioSwitch.setVisibility(View.VISIBLE);
                 mInput.setHint(R.string.protect_path_hint);
                 mInput.setEnabled(true);
-                mInput.setText(MultiPreferences.getInstance().getString("video_path_network", ""));
-                mAudioSwitch.setChecked(MultiPreferences.getInstance().getBoolean("video_path_network_audio_enable", true));
+                mInput.setText(SPUtils.getInstance().getString("video_path_network", ""));
+                mAudioSwitch.setChecked(SPUtils.getInstance().getBoolean("video_path_network_audio_enable", true));
                 break;
         }
     }
@@ -219,7 +220,7 @@ public class SettingFragment extends BaseFragment {
         AppUtil.killAllApps();
         switch (mMethodType) {
             case MethodType.TYPE_DISABLE_CAMERA:
-                MultiPreferences.getInstance().setInt("method_type", mMethodType);
+                SPUtils.getInstance().put("method_type", mMethodType);
                 ToastUtils.showToast("Save Success...");
                 break;
             case MethodType.TYPE_LOCAL_VIDEO:
@@ -257,9 +258,9 @@ public class SettingFragment extends BaseFragment {
                     ToastUtils.showToast("Video url should start with http or https");
                     return;
                 }
-                MultiPreferences.getInstance().setInt("method_type", mMethodType);
-                MultiPreferences.getInstance().setString("video_path_network", mInput.getText().toString());
-                MultiPreferences.getInstance().setBoolean("video_path_network_audio_enable", mAudioSwitch.isChecked());
+                SPUtils.getInstance().put("method_type", mMethodType);
+                SPUtils.getInstance().put("video_path_network", mInput.getText().toString());
+                SPUtils.getInstance().put("video_path_network_audio_enable", mAudioSwitch.isChecked());
                 ToastUtils.showToast("Save Success...");
                 break;
         }

@@ -7,14 +7,15 @@ import android.net.Uri;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.blankj.utilcode.util.SPUtils;
+
 import virtual.camera.app.R;
 import virtual.camera.app.util.ToastUtils;
-import virtual.camera.camera.MultiPreferences;
 
 public class DialogUtil {
     public static void showDialog(final Activity activity, boolean check) {
         try {
-            boolean show_start_dialog = MultiPreferences.getInstance().getBoolean("show_start_dialog", true);
+            boolean show_start_dialog = SPUtils.getInstance().getBoolean("show_start_dialog", true);
             if (!show_start_dialog && check) {
                 return;
             }
@@ -53,7 +54,7 @@ public class DialogUtil {
                         } catch (Throwable e) {
                             e.printStackTrace();
                         }
-                        MultiPreferences.getInstance().setBoolean("show_start_dialog", false);
+                        SPUtils.getInstance().put("show_start_dialog", false);
                     }
                 });
             }

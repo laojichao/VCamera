@@ -1,7 +1,6 @@
 package virtual.camera.app.app
 
 import android.annotation.SuppressLint
-import android.app.Application
 import android.content.Context
 import com.hack.opensdk.HackApplication
 
