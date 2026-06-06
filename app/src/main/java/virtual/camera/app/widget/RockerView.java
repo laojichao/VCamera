@@ -21,12 +21,22 @@ import virtual.camera.app.util.MathUtil;
 
 
 /**
- * A custom view for game or others.
- * <p/>
- * Author: GcsSloop
- * Created Date: 16/5/24
- * Copyright (C) 2016 GcsSloop.
- * GitHub: https://github.com/GcsSloop
+ * 自定义摇杆控件（Joystick View）。
+ * <p>
+ * 基于 {@link SurfaceView} 实现的虚拟摇杆组件，常用于游戏或远程控制场景。
+ * 支持自定义活动区域半径、摇杆半径、颜色或位图等外观属性，
+ * 通过 {@link RockerListener} 接口实时回调摇杆的角度和距离信息。
+ * </p>
+ * <p>
+ * 采用双线程架构：
+ * <ul>
+ *   <li>绘制线程 - 按 {@link #mRefreshCycle} 周期刷新画面</li>
+ *   <li>回调线程 - 按 {@link #mCallbackCycle} 周期触发监听器回调</li>
+ * </ul>
+ * </p>
+ *
+ * @author GcsSloop
+ * @see <a href="https://github.com/GcsSloop">GitHub 主页</a>
  */
 public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.Callback {
 
@@ -75,7 +85,10 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
 
 
     private RockerListener mListener;
+    /** 摇杆事件类型：触摸操作触发的回调 */
     public static final int EVENT_ACTION = 1;
+
+    /** 摇杆事件类型：定时轮询触发的回调 */
     public static final int EVENT_CLOCK = 2;
 
     private int mRefreshCycle = DEFAULT_REFRESH_CYCLE;
@@ -84,14 +97,35 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
 
     /*Life Cycle***********************************************************************************/
 
+    /**
+     * 使用默认属性的构造方法。
+     *
+     * @param context 上下文对象
+     */
     public RockerView(Context context) {
         this(context, null);
     }
 
+    /**
+     * 从 XML 布局加载时使用的构造方法。
+     *
+     * @param context  上下文对象
+     * @param attrs    XML 属性集合
+     */
     public RockerView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
+    /**
+     * 完整参数构造方法。
+     * <p>
+     * 初始化自定义属性、画笔，并配置 SurfaceView 和 SurfaceHolder。
+     * </p>
+     *
+     * @param context      上下文对象
+     * @param attrs        XML 属性集合
+     * @param defStyleAttr 默认样式属性
+     */
     public RockerView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
@@ -138,6 +172,16 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         mHolder.setFormat(PixelFormat.TRANSPARENT); //设置背景透明
     }
 
+    /**
+     * 测量控件尺寸。
+     * <p>
+     * 默认尺寸为 {@code (活动区域半径 + 摇杆半径) * 2} 的正方形，
+     * 若父容器指定了确切尺寸或最大尺寸，则使用父容器约束值。
+     * </p>
+     *
+     * @param widthMeasureSpec  宽度测量规格
+     * @param heightMeasureSpec 高度测量规格
+     */
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int measureWidth = 0, measureHeight = 0;
@@ -166,6 +210,19 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         setMeasuredDimension(measureWidth, measureHeight);
     }
 
+    /**
+     * 控件尺寸变化时回调，重新计算活动区域中心和半径。
+     * <p>
+     * 活动区域中心默认设为控件中心；若未通过 {@link #setAreaRadius(int)}
+     * 或 {@link #setRockerRadius(int)} 手动设置半径，则自动按 75% / 25% 的
+     * 比例分配活动区域和摇杆的半径。
+     * </p>
+     *
+     * @param w    新的宽度
+     * @param h    新的高度
+     * @param oldw 旧的宽度
+     * @param oldh 旧的高度
+     */
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
@@ -182,6 +239,11 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
             mRockerRadius = (int) (tempRadius * 0.25);
     }
 
+    /**
+     * Surface 创建完成时回调，启动绘制线程和回调线程。
+     *
+     * @param holder 关联的 SurfaceHolder
+     */
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         try {
@@ -208,16 +270,35 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         }
     }
 
+    /**
+     * Surface 尺寸变化时回调（本实现中无额外操作）。
+     *
+     * @param holder 关联的 SurfaceHolder
+     * @param format 像素格式
+     * @param width  新的宽度
+     * @param height 新的高度
+     */
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
     }
 
+    /**
+     * Surface 销毁时回调，停止绘制线程和回调线程。
+     *
+     * @param holder 关联的 SurfaceHolder
+     */
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         mDrawOk = false;
         mCallbackOk = false;
     }
 
+    /**
+     * 控件可见性变化时回调，根据可见状态启停线程。
+     *
+     * @param changedView 发生变化的视图
+     * @param visibility  新的可见性状态
+     */
     @Override
     protected void onVisibilityChanged(@NonNull View changedView, int visibility) {
         super.onVisibilityChanged(changedView, visibility);
@@ -232,6 +313,20 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
 
     /*Event Response*******************************************************************************/
 
+    /**
+     * 处理触摸事件，驱动摇杆位置更新。
+     * <p>
+     * 触摸事件处理逻辑：
+     * <ul>
+     *   <li>{@code ACTION_DOWN} - 若触摸点在活动区域外则忽略</li>
+     *   <li>{@code ACTION_MOVE} - 更新摇杆位置（受活动区域边界约束），并触发角度/距离回调</li>
+     *   <li>{@code ACTION_UP} - 摇杆归位到中心，并触发归位回调</li>
+     * </ul>
+     * </p>
+     *
+     * @param event 触摸事件
+     * @return 始终返回 {@code true}，表示消费该事件
+     */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         try {
@@ -277,6 +372,13 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
 
     /*Thread - draw view***************************************************************************/
 
+    /**
+     * 绘制线程主循环。
+     * <p>
+     * 以 {@link #mRefreshCycle} 毫秒为周期，锁定 Canvas、清除背景、
+     * 绘制活动区域和摇杆，然后解锁提交。
+     * </p>
+     */
     @Override
     public void run() {
         if (isInEditMode()) {
@@ -307,6 +409,11 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         }
     }
 
+    /**
+     * 绘制摇杆活动区域（圆形或自定义位图）。
+     *
+     * @param canvas 画布对象
+     */
     private void drawArea(Canvas canvas) {
 
         if (null != mAreaBitmap) {
@@ -324,6 +431,11 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         }
     }
 
+    /**
+     * 绘制摇杆指示器（圆形或自定义位图）。
+     *
+     * @param canvas 画布对象
+     */
     private void drawRocker(Canvas canvas) {
         if (null != mRockerBitmap) {
             mPaint.setColor(Color.BLACK);
@@ -340,6 +452,13 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         }
     }
 
+    /**
+     * 定时轮询回调方法，由回调线程按 {@link #mCallbackCycle} 周期调用。
+     * <p>
+     * 若摇杆位于中心位置则回调角度 -1、距离 0；
+     * 否则计算当前角度和距离并回调给监听器。
+     * </p>
+     */
     private void listenerCallback() {
         if (mListener != null) {
             if (mRockerPosition.x == mAreaPosition.x && mRockerPosition.y == mAreaPosition.y) {
@@ -353,12 +472,24 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
         }
     }
 
-    //获取摇杆偏移角度 上方中间为0，左为负，右为正
+    /**
+     * 将弧度转换为摇杆偏移角度。
+     * <p>
+     * 角度基准：正上方为 0 度，逆时针方向为负值，顺时针方向为正值。
+     * </p>
+     *
+     * @param radian 弧度值
+     * @return 偏移角度（0~360 度范围）
+     */
     private float getAngleConvert(float radian) {
         return 90 + Math.round(radian / Math.PI * 180);
     }
 
-    // for preview
+    /**
+     * 编辑器预览模式下的绘制方法。
+     *
+     * @param canvas 画布对象
+     */
     @Override
     protected void onDraw(Canvas canvas) {
         if (isInEditMode()) {
@@ -370,76 +501,166 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
 
     /*Getter Setter********************************************************************************/
 
+    /**
+     * 设置摇杆是否允许移动。
+     *
+     * @param isMove {@code true} 允许移动（默认），{@code false} 禁止移动
+     */
     public void setCanMove(boolean isMove) {
         this.canMove = isMove;
     }
 
+    /**
+     * 获取活动区域半径。
+     *
+     * @return 活动区域半径（像素）
+     */
     public int getAreaRadius() {
         return mAreaRadius;
     }
 
+    /**
+     * 设置活动区域半径。
+     *
+     * @param areaRadius 活动区域半径（像素）
+     */
     public void setAreaRadius(int areaRadius) {
         mAreaRadius = areaRadius;
     }
 
+    /**
+     * 获取摇杆指示器半径。
+     *
+     * @return 摇杆半径（像素）
+     */
     public int getRockerRadius() {
         return mRockerRadius;
     }
 
+    /**
+     * 设置摇杆指示器半径。
+     *
+     * @param rockerRadius 摇杆半径（像素）
+     */
     public void setRockerRadius(int rockerRadius) {
         mRockerRadius = rockerRadius;
     }
 
+    /**
+     * 获取活动区域背景位图。
+     *
+     * @return 活动区域位图，未设置时为 {@code null}
+     */
     public Bitmap getAreaBitmap() {
         return mAreaBitmap;
     }
 
+    /**
+     * 设置活动区域背景位图（设置后将忽略颜色属性）。
+     *
+     * @param areaBitmap 活动区域位图
+     */
     public void setAreaBitmap(Bitmap areaBitmap) {
         mAreaBitmap = areaBitmap;
     }
 
+    /**
+     * 获取摇杆指示器位图。
+     *
+     * @return 摇杆位图，未设置时为 {@code null}
+     */
     public Bitmap getRockerBitmap() {
         return mRockerBitmap;
     }
 
+    /**
+     * 设置摇杆指示器位图（设置后将忽略颜色属性）。
+     *
+     * @param rockerBitmap 摇杆位图
+     */
     public void setRockerBitmap(Bitmap rockerBitmap) {
         mRockerBitmap = rockerBitmap;
     }
 
+    /**
+     * 获取绘制刷新周期。
+     *
+     * @return 刷新周期（毫秒）
+     */
     public int getRefreshCycle() {
         return mRefreshCycle;
     }
 
+    /**
+     * 设置绘制刷新周期。
+     *
+     * @param refreshCycle 刷新周期（毫秒），值越小画面越流畅但 CPU 占用越高
+     */
     public void setRefreshCycle(int refreshCycle) {
         mRefreshCycle = refreshCycle;
     }
 
+    /**
+     * 获取回调触发周期。
+     *
+     * @return 回调周期（毫秒）
+     */
     public int getCallbackCycle() {
         return mCallbackCycle;
     }
 
+    /**
+     * 设置监听器回调触发周期。
+     *
+     * @param callbackCycle 回调周期（毫秒）
+     */
     public void setCallbackCycle(int callbackCycle) {
         mCallbackCycle = callbackCycle;
     }
 
+    /**
+     * 获取活动区域颜色。
+     *
+     * @return 活动区域的 ARGB 颜色值
+     */
     public int getAreaColor() {
         return mAreaColor;
     }
 
+    /**
+     * 设置活动区域颜色（同时清除自定义位图）。
+     *
+     * @param areaColor ARGB 颜色值
+     */
     public void setAreaColor(int areaColor) {
         mAreaColor = areaColor;
         mAreaBitmap = null;
     }
 
+    /**
+     * 获取摇杆指示器颜色。
+     *
+     * @return 摇杆的 ARGB 颜色值
+     */
     public int getRockerColor() {
         return mRockerColor;
     }
 
+    /**
+     * 设置摇杆指示器颜色（同时清除自定义位图）。
+     *
+     * @param rockerColor ARGB 颜色值
+     */
     public void setRockerColor(int rockerColor) {
         mRockerColor = rockerColor;
         mRockerBitmap = null;
     }
 
+    /**
+     * 设置摇杆事件监听器。
+     *
+     * @param listener 摇杆监听器，不可为 {@code null}
+     */
     public void setListener(@NonNull RockerListener listener) {
         mListener = listener;
     }
@@ -447,16 +668,19 @@ public class RockerView extends SurfaceView implements Runnable, SurfaceHolder.C
     /*Rocker Listener******************************************************************************/
 
     /**
-     * rocker listener
+     * 摇杆事件监听接口。
+     * <p>
+     * 实现此接口以接收摇杆的角度和距离变化通知。
+     * </p>
      */
     public interface RockerListener {
 
         /**
-         * you can get some event from this method
+         * 摇杆状态变化时回调。
          *
-         * @param eventType       The event type, EVENT_ACTION or EVENT_CLOCK
-         * @param currentAngle    The current angle
-         * @param currentDistance The current distance (px)
+         * @param eventType       事件类型：{@link #EVENT_ACTION}（触摸触发）或 {@link #EVENT_CLOCK}（定时轮询）
+         * @param currentAngle    当前摇杆偏移角度（0~360 度），摇杆归位时为 -1
+         * @param currentDistance 当前摇杆与中心的距离（像素），摇杆归位时为 0
          */
         void callback(int eventType, float currentAngle, float currentDistance);
     }

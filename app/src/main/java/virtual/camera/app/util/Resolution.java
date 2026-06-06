@@ -16,6 +16,14 @@ import android.view.inputmethod.InputMethodManager;
 
 import java.lang.reflect.Field;
 
+/**
+ * 屏幕分辨率与显示相关的工具类。
+ * <p>
+ * 提供屏幕宽高获取、dp/sp/px 单位互转、软键盘显示/隐藏、
+ * 状态栏高度获取、导航栏尺寸获取等常用 UI 辅助方法。
+ * 兼容不同 Android API 版本的屏幕信息获取方式。
+ * </p>
+ */
 public class Resolution {
     private static final String TAG = "UtilsScreen";
 
@@ -133,7 +141,10 @@ public class Resolution {
     ///////////////////////////////////////////////////////////////////////
 
     /**
-     * 获取屏幕密度
+     * 获取屏幕密度（density）。
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @return 屏幕密度值；若上下文为 {@code null} 则返回 0
      */
     public static float getDensity(Context context) {
         float density = 0f;
@@ -149,7 +160,12 @@ public class Resolution {
     }
 
     /**
-     * 检查分辨率是否为本机
+     * 检查指定分辨率是否与当前设备屏幕的真实物理分辨率一致。
+     *
+     * @param context Activity 上下文，不可为 {@code null}
+     * @param width   待比较的宽度像素值
+     * @param height  待比较的高度像素值
+     * @return {@code true} 表示分辨率一致，{@code false} 表示不一致
      */
     public static boolean checkPix(Activity context, int width, int height) {
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
@@ -162,28 +178,42 @@ public class Resolution {
     }
 
     /**
-     * 获取屏幕分辨率：宽
+     * 获取屏幕分辨率的宽度（像素）。
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @return 屏幕宽度像素值
      */
     public static int getScreenPixWidth(Context context) {
         return context.getResources().getDisplayMetrics().widthPixels;
     }
 
     /**
-     * 获取屏幕分辨率：高
+     * 获取屏幕分辨率的高度（像素）。
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @return 屏幕高度像素值
      */
     public static int getScreenPixHeight(Context context) {
         return context.getResources().getDisplayMetrics().heightPixels;
     }
 
     /**
-     * dipתpx
+     * 将 dp（密度无关像素）值转换为 px（像素）值。
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @param dip     dp 值
+     * @return 对应的 px 值（四舍五入取整）
      */
     public static int dipToPx(Context context, int dip) {
         return (int) (dip * context.getResources().getDisplayMetrics().density + 0.5f);
     }
 
     /**
-     * pxתdip
+     * 将 px（像素）值转换为 dp（密度无关像素）值。
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @param pxValue px 值
+     * @return 对应的 dp 值（四舍五入取整）
      */
     public static int pxToDip(Context context, float pxValue) {
         final float scale = context.getResources().getDisplayMetrics().density;
@@ -191,11 +221,11 @@ public class Resolution {
     }
 
     /**
-     * 将sp值转换为px值，保证文字大小不变
+     * 将 sp（可缩放像素）值转换为 px（像素）值，保证文字大小在不同密度屏幕上一致。
      *
-     * @param context
-     * @param spValue
-     * @return
+     * @param context 上下文对象，不可为 {@code null}
+     * @param spValue sp 值
+     * @return 对应的 px 值（四舍五入取整）
      */
     public static int sp2px(Context context, float spValue) {
         final float fontScale = context.getResources().getDisplayMetrics().scaledDensity;
@@ -203,7 +233,9 @@ public class Resolution {
     }
 
     /**
-     * 隐藏软键盘
+     * 隐藏指定 View 关联的软键盘。
+     *
+     * @param view 当前持有焦点的 View，不可为 {@code null}
      */
     public static void hideInputMethod(View view) {
         InputMethodManager imm = (InputMethodManager) view.getContext()
@@ -214,7 +246,9 @@ public class Resolution {
     }
 
     /**
-     * 显示软键盘
+     * 为指定 View 显示软键盘。
+     *
+     * @param view 需要获取输入焦点的 View，不可为 {@code null}
      */
     public static void showInputMethod(View view) {
         InputMethodManager imm = (InputMethodManager) view.getContext()
@@ -225,7 +259,10 @@ public class Resolution {
     }
 
     /**
-     * 多少时间后显示软键盘
+     * 延迟指定毫秒后为指定 View 显示软键盘。
+     *
+     * @param view       需要获取输入焦点的 View，不可为 {@code null}
+     * @param delayMillis 延迟时间，单位为毫秒
      */
     public static void showInputMethod(final View view, long delayMillis) {
         // 显示输入法
@@ -240,7 +277,10 @@ public class Resolution {
     }
 
     /**
-     * 判断手机是否在锁屏状态 true锁屏 false未锁屏
+     * 判断手机当前是否处于未锁屏（可交互）状态。
+     *
+     * @param c 上下文对象，不可为 {@code null}
+     * @return {@code true} 表示未锁屏，{@code false} 表示处于锁屏状态
      */
     public static boolean isScreenLocked(Context c) {
         KeyguardManager mKeyguardManager = (KeyguardManager) c
@@ -250,6 +290,16 @@ public class Resolution {
         return bResult;
     }
 
+    /**
+     * 获取系统状态栏高度（像素）。
+     * <p>
+     * 通过反射访问 {@code com.android.internal.R$dimen} 获取状态栏高度资源。
+     * 若反射失败则返回默认值 38 像素。
+     * </p>
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @return 状态栏高度（像素）
+     */
     public static int getBarHeight(Context context) {
         Class<?> c = null;
         Object obj = null;
@@ -269,7 +319,17 @@ public class Resolution {
     }
 
     //http://stackoverflow.com/questions/20264268/how-to-get-height-and-width-of-navigation-bar-programmatically
-    //获取屏幕下方导航栏高度
+
+    /**
+     * 获取屏幕底部导航栏的尺寸。
+     * <p>
+     * 通过比较应用可用区域和真实屏幕尺寸的差异来计算导航栏高度。
+     * 若不存在导航栏则返回空的 {@link Point}。
+     * </p>
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @return 导航栏尺寸，x 为宽度，y 为高度（像素）
+     */
     public static Point getNavigationBarSize(Context context) {
         Point appUsableSize = getScreenSize(context, null);
         Point realScreenSize = getRealScreenSize(context);
@@ -289,6 +349,16 @@ public class Resolution {
     }
 
 
+    /**
+     * 获取屏幕的真实物理分辨率（包含系统装饰区域）。
+     * <p>
+     * API 17 及以上使用 {@code Display.getRealSize()}，
+     * API 14 ~ 16 通过反射调用 {@code getRawWidth/getRawHeight}。
+     * </p>
+     *
+     * @param context 上下文对象，不可为 {@code null}
+     * @return 真实屏幕尺寸，x 为宽度，y 为高度（像素）
+     */
     public static Point getRealScreenSize(Context context) {
         WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         Display display = windowManager.getDefaultDisplay();

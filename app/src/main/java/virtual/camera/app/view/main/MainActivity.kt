@@ -26,14 +26,27 @@ import virtual.camera.app.view.list.ListActivity
 import virtual.camera.app.view.setting.SettingActivity
 
 
+/**
+ * 应用主界面。
+ *
+ * 通过 ViewPager2 + DotsIndicator 展示多用户空间的应用列表，
+ * 每个用户空间对应一个 [AppsFragment] 页面。
+ * 支持以下功能：
+ * - 左右滑动切换用户空间
+ * - 通过 FAB 按钮安装新应用（跳转至 [ListActivity] 选择 APK）
+ * - 点击工具栏副标题编辑用户备注
+ * - 菜单中提供设置页面入口和一键杀掉所有应用功能
+ */
 class MainActivity : LoadingActivity() {
 
     private val viewBinding: ActivityMainBinding by inflate()
 
     private lateinit var mViewPagerAdapter: ViewPagerAdapter
 
+    /** 所有用户空间对应的 Fragment 列表 */
     private val fragmentList = mutableListOf<AppsFragment>()
 
+    /** 当前选中的用户空间 ID */
     private var currentUser = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +59,12 @@ class MainActivity : LoadingActivity() {
         DialogUtil.showDialog(this,true)
     }
 
+    /**
+     * 初始化工具栏副标题。
+     *
+     * 设置默认用户备注，并为副标题注册点击事件以弹出编辑对话框。
+     * 通过 hack 方式直接获取工具栏的子视图来绑定点击事件。
+     */
     private fun initToolbarSubTitle() {
         updateUserRemark(0)
         //hack code
@@ -67,6 +86,12 @@ class MainActivity : LoadingActivity() {
         }
     }
 
+    /**
+     * 初始化 ViewPager。
+     *
+     * 从 [HackApi] 获取可用用户空间列表，为每个用户空间创建对应的 [AppsFragment]，
+     * 并额外添加一个"新建用户"的占位 Fragment。注册页面切换回调以更新用户备注和 FAB 状态。
+     */
     private fun initViewPager() {
         val userList = HackApi.getAvailableUserSpace()
         userList.forEach {
@@ -74,6 +99,7 @@ class MainActivity : LoadingActivity() {
         }
 
         currentUser = userList.firstOrNull() ?: 0
+        // 末尾追加一个用于"新建用户空间"的占位 Fragment
         fragmentList.add(AppsFragment.newInstance(userList.size))
 
         mViewPagerAdapter = ViewPagerAdapter(this)
@@ -92,6 +118,9 @@ class MainActivity : LoadingActivity() {
 
     }
 
+    /**
+     * 初始化 FAB 悬浮按钮，点击后跳转至 [ListActivity] 选择要安装的 APK。
+     */
     private fun initFab() {
         viewBinding.fab.setOnClickListener {
             val userId = viewBinding.viewPager.currentItem
@@ -101,6 +130,11 @@ class MainActivity : LoadingActivity() {
         }
     }
 
+    /**
+     * 控制 FAB 悬浮按钮的显示/隐藏动画。
+     *
+     * @param show true 显示按钮，false 隐藏按钮（向下平移并淡出）
+     */
     fun showFloatButton(show: Boolean) {
         val tranY: Float = Resolution.convertDpToPixel(120F, App.getContext())
         val time = 200L
@@ -113,6 +147,11 @@ class MainActivity : LoadingActivity() {
         }
     }
 
+    /**
+     * 扫描用户空间变化，同步更新 Fragment 列表。
+     *
+     * 当用户空间数量增加时添加新 Fragment，减少时移除末尾多余项。
+     */
     fun scanUser() {
         val userList = HackApi.getAvailableUserSpace()
 
@@ -126,6 +165,11 @@ class MainActivity : LoadingActivity() {
 
     }
 
+    /**
+     * 更新工具栏副标题为指定用户空间的备注名称。
+     *
+     * @param userId 用户空间 ID
+     */
     private fun updateUserRemark(userId: Int) {
         var remark = AppManager.mRemarkSharedPreferences.getString("Remark$userId", "User $userId")
         if (remark.isNullOrEmpty()) {
@@ -135,6 +179,12 @@ class MainActivity : LoadingActivity() {
         viewBinding.toolbarLayout.toolbar.subtitle = remark
     }
 
+    /**
+     * APK 安装结果回调。
+     *
+     * 从 [ListActivity] 接收选中的 APK 路径和目标用户空间 ID，
+     * 调用对应 Fragment 的安装方法执行安装。
+     */
     private val apkPathResult =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
@@ -154,6 +204,13 @@ class MainActivity : LoadingActivity() {
         return true
     }
 
+    /**
+     * 处理菜单项点击事件。
+     *
+     * - main_setting: 跳转至设置页面
+     * - killApps: 杀掉所有已运行的虚拟应用
+     * - open_source: 显示开源信息对话框
+     */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item?.itemId) {
             R.id.main_setting -> {
@@ -170,7 +227,15 @@ class MainActivity : LoadingActivity() {
         return true
     }
 
+    /**
+     * 伴生对象，提供便捷的页面启动方法。
+     */
     companion object {
+        /**
+         * 启动主界面。
+         *
+         * @param context 上下文环境
+         */
         fun start(context: Context) {
             val intent = Intent(context, MainActivity::class.java)
             context.startActivity(intent)
